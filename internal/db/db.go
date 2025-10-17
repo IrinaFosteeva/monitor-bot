@@ -21,6 +21,7 @@ func ConnectDB() *sqlx.DB {
 		dbUser, dbPassword, dbHost, dbPort, dbName,
 	)
 
+	log.Println(dbUser, dbPassword, dbHost, dbPort, dbName)
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		log.Fatalf("❌ Ошибка подключения к БД: %v", err)

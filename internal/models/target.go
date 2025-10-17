@@ -3,10 +3,16 @@ package models
 import "time"
 
 type Target struct {
-	ID          int64     `db:"id" json:"id"`
-	Title       string    `db:"title" json:"title"`
-	Description string    `db:"description" json:"description"`
-	Deadline    time.Time `db:"deadline" json:"deadline"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	ID                int64     `db:"id" json:"id"`
+	Name              string    `db:"name" json:"name"`
+	URL               string    `db:"url" json:"url"`
+	Method            string    `db:"method" json:"method"`
+	ExpectedStatus    int       `db:"expected_status" json:"expected_status"`
+	BodyRegex         *string   `db:"body_regex" json:"body_regex,omitempty"`
+	IntervalSeconds   int       `db:"interval_seconds" json:"interval_seconds"`
+	TimeoutSeconds    int       `db:"timeout_seconds" json:"timeout_seconds"`
+	RegionRestriction *string   `db:"region_restriction" json:"region_restriction,omitempty"`
+	CreatedBy         *int64    `db:"created_by" json:"created_by,omitempty"`
+	Enabled           bool      `db:"enabled" json:"enabled"`
+	CreatedAt         time.Time `db:"created_at" json:"created_at"`
 }

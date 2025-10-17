@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"time"
-
 	"github.com/jmoiron/sqlx"
 	"monitor-bot/internal/models"
 )
@@ -18,13 +16,23 @@ func NewTargetRepository(db *sqlx.DB) *TargetRepository {
 
 func (r *TargetRepository) Create(ctx context.Context, t *models.Target) error {
 	query := `
-		INSERT INTO targets (title, description, deadline, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
-		RETURNING id, created_at, updated_at
+		INSERT INTO targets
+			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_restriction, created_by, enabled)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		RETURNING id, created_at
 	`
 	return r.db.QueryRowContext(ctx, query,
-		t.Title, t.Description, t.Deadline,
-	).Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
+		t.Name,
+		t.URL,
+		t.Method,
+		t.ExpectedStatus,
+		t.BodyRegex,
+		t.IntervalSeconds,
+		t.TimeoutSeconds,
+		t.RegionRestriction,
+		t.CreatedBy,
+		t.Enabled,
+	).Scan(&t.ID, &t.CreatedAt)
 }
 
 func (r *TargetRepository) GetByID(ctx context.Context, id int64) (*models.Target, error) {
@@ -43,10 +51,29 @@ func (r *TargetRepository) GetAll(ctx context.Context) ([]models.Target, error) 
 }
 
 func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
-	t.UpdatedAt = time.Now()
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE targets SET title=$1, description=$2, deadline=$3, updated_at=$4 WHERE id=$5`,
-		t.Title, t.Description, t.Deadline, t.UpdatedAt, t.ID,
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE targets SET
+			name=$1,
+			url=$2,
+			method=$3,
+			expected_status=$4,
+			body_regex=$5,
+			interval_seconds=$6,
+			timeout_seconds=$7,
+			region_restriction=$8,
+			enabled=$9
+		WHERE id=$10
+	`,
+		t.Name,
+		t.URL,
+		t.Method,
+		t.ExpectedStatus,
+		t.BodyRegex,
+		t.IntervalSeconds,
+		t.TimeoutSeconds,
+		t.RegionRestriction,
+		t.Enabled,
+		t.ID,
 	)
 	return err
 }
