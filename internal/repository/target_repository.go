@@ -17,10 +17,13 @@ func NewTargetRepository(db *sqlx.DB) *TargetRepository {
 func (r *TargetRepository) Create(ctx context.Context, t *models.Target) error {
 	query := `
 		INSERT INTO targets
-			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_restriction, created_by, enabled)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_restriction, created_by, enabled, type)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING id, created_at
 	`
+	if t.Type == "" {
+		t.Type = "http"
+	}
 	return r.db.QueryRowContext(ctx, query,
 		t.Name,
 		t.URL,
@@ -32,6 +35,7 @@ func (r *TargetRepository) Create(ctx context.Context, t *models.Target) error {
 		t.RegionRestriction,
 		t.CreatedBy,
 		t.Enabled,
+		t.Type,
 	).Scan(&t.ID, &t.CreatedAt)
 }
 
@@ -51,6 +55,9 @@ func (r *TargetRepository) GetAll(ctx context.Context) ([]models.Target, error) 
 }
 
 func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
+	if t.Type == "" {
+		t.Type = "http"
+	}
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE targets SET
 			name=$1,
@@ -61,8 +68,9 @@ func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
 			interval_seconds=$6,
 			timeout_seconds=$7,
 			region_restriction=$8,
-			enabled=$9
-		WHERE id=$10
+			enabled=$9,
+		    type=$10
+		WHERE id=$11
 	`,
 		t.Name,
 		t.URL,
@@ -73,6 +81,7 @@ func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
 		t.TimeoutSeconds,
 		t.RegionRestriction,
 		t.Enabled,
+		t.Type,
 		t.ID,
 	)
 	return err

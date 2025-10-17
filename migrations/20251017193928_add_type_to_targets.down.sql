@@ -1,0 +1,2 @@
+ALTER TABLE targets
+DROP COLUMN type;

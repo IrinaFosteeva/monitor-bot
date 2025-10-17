@@ -38,12 +38,13 @@ func TestCreateTarget_Success(t *testing.T) {
 		RegionRestriction: nil,
 		CreatedBy:         nil,
 		Enabled:           true,
+		Type:              "http",
 	}
 
 	mock.ExpectQuery(regexp.QuoteMeta(
 		`INSERT INTO targets
-			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_restriction, created_by, enabled)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_restriction, created_by, enabled, type)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		 RETURNING id, created_at`)).
 		WithArgs(
 			target.Name,
@@ -56,6 +57,7 @@ func TestCreateTarget_Success(t *testing.T) {
 			target.RegionRestriction,
 			target.CreatedBy,
 			target.Enabled,
+			target.Type,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
 			AddRow(1, time.Now()))
@@ -81,12 +83,13 @@ func TestCreateTarget_DBError(t *testing.T) {
 		RegionRestriction: nil,
 		CreatedBy:         nil,
 		Enabled:           true,
+		Type:              "http",
 	}
 
 	mock.ExpectQuery(regexp.QuoteMeta(
 		`INSERT INTO targets
 			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_restriction, created_by, enabled)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		 RETURNING id, created_at`)).
 		WithArgs(
 			target.Name,
@@ -99,6 +102,7 @@ func TestCreateTarget_DBError(t *testing.T) {
 			target.RegionRestriction,
 			target.CreatedBy,
 			target.Enabled,
+			target.Type,
 		).
 		WillReturnError(errors.New("db error"))
 
@@ -123,13 +127,14 @@ func TestGetByID_Success(t *testing.T) {
 		RegionRestriction: nil,
 		CreatedBy:         nil,
 		Enabled:           true,
+		Type:              "http",
 	}
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM targets WHERE id = $1")).
 		WithArgs(expected.ID).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "name", "url", "method", "expected_status", "body_regex",
-			"interval_seconds", "timeout_seconds", "region_restriction", "created_by", "enabled", "created_at",
+			"interval_seconds", "timeout_seconds", "region_restriction", "created_by", "enabled", "created_at", "type",
 		}).AddRow(
 			expected.ID,
 			expected.Name,
@@ -143,6 +148,7 @@ func TestGetByID_Success(t *testing.T) {
 			expected.CreatedBy,
 			expected.Enabled,
 			time.Now(),
+			expected.Type,
 		))
 
 	result, err := repo.GetByID(ctx, expected.ID)
@@ -172,11 +178,11 @@ func TestGetAll_Success(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM targets ORDER BY id")).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "name", "url", "method", "expected_status", "body_regex",
-			"interval_seconds", "timeout_seconds", "region_restriction", "created_by", "enabled", "created_at",
+			"interval_seconds", "timeout_seconds", "region_restriction", "created_by", "enabled", "created_at", "type",
 		}).AddRow(
-			1, "Site1", "https://site1.com", "GET", 200, nil, 60, 5, nil, nil, true, time.Now(),
+			1, "Site1", "https://site1.com", "GET", 200, nil, 60, 5, nil, nil, true, time.Now(), "tcp",
 		).AddRow(
-			2, "Site2", "https://site2.com", "HEAD", 200, nil, 120, 5, nil, nil, true, time.Now(),
+			2, "Site2", "https://site2.com", "HEAD", 200, nil, 120, 5, nil, nil, true, time.Now(), "tcp",
 		))
 
 	result, err := repo.GetAll(ctx)
@@ -213,6 +219,7 @@ func TestUpdate_Success(t *testing.T) {
 		TimeoutSeconds:    10,
 		RegionRestriction: nil,
 		Enabled:           true,
+		Type:              "ssl",
 	}
 
 	mock.ExpectExec(regexp.QuoteMeta(
@@ -225,8 +232,9 @@ func TestUpdate_Success(t *testing.T) {
 			interval_seconds=$6,
 			timeout_seconds=$7,
 			region_restriction=$8,
-			enabled=$9
-		WHERE id=$10`)).
+			enabled=$9,
+			type=$10
+		WHERE id=$11`)).
 		WithArgs(
 			target.Name,
 			target.URL,
@@ -237,6 +245,7 @@ func TestUpdate_Success(t *testing.T) {
 			target.TimeoutSeconds,
 			target.RegionRestriction,
 			target.Enabled,
+			target.Type,
 			target.ID,
 		).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -261,6 +270,7 @@ func TestUpdate_DBError(t *testing.T) {
 		TimeoutSeconds:    10,
 		RegionRestriction: nil,
 		Enabled:           true,
+		Type:              "ssl",
 	}
 
 	mock.ExpectExec(regexp.QuoteMeta(
@@ -273,8 +283,9 @@ func TestUpdate_DBError(t *testing.T) {
 			interval_seconds=$6,
 			timeout_seconds=$7,
 			region_restriction=$8,
-			enabled=$9
-		WHERE id=$10`)).
+			enabled=$9,
+			type=$10,
+		WHERE id=$11`)).
 		WithArgs(
 			target.Name,
 			target.URL,
@@ -285,6 +296,7 @@ func TestUpdate_DBError(t *testing.T) {
 			target.TimeoutSeconds,
 			target.RegionRestriction,
 			target.Enabled,
+			target.Type,
 			target.ID,
 		).
 		WillReturnError(errors.New("db error"))

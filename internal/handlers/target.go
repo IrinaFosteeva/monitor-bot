@@ -99,6 +99,7 @@ func UpdateTarget(repo *repository.TargetRepository) http.HandlerFunc {
 		existing.TimeoutSeconds = t.TimeoutSeconds
 		existing.RegionRestriction = t.RegionRestriction
 		existing.Enabled = t.Enabled
+		existing.Type = t.Type
 
 		if err := repo.Update(ctx, existing); err != nil {
 			http.Error(w, "Failed to update target: "+err.Error(), http.StatusInternalServerError)
