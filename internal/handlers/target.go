@@ -97,7 +97,7 @@ func UpdateTarget(repo *repository.TargetRepository) http.HandlerFunc {
 		existing.BodyRegex = t.BodyRegex
 		existing.IntervalSeconds = t.IntervalSeconds
 		existing.TimeoutSeconds = t.TimeoutSeconds
-		existing.RegionRestriction = t.RegionRestriction
+		existing.RegionID = t.RegionID
 		existing.Enabled = t.Enabled
 		existing.Type = t.Type
 

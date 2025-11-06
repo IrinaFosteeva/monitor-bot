@@ -10,5 +10,4 @@ type Check struct {
 	HttpCode       *int      `db:"http_code" json:"http_code,omitempty"`
 	ResponseTimeMs int64     `db:"response_time_ms" json:"response_time_ms"`
 	Error          *string   `db:"error" json:"error,omitempty"`
-	Region         *string   `db:"region" json:"region,omitempty"`
 }

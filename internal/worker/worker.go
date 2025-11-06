@@ -65,7 +65,6 @@ func (w *Worker) Run(ctx context.Context, target models.Target) {
 		HttpCode:       code,
 		ResponseTimeMs: duration,
 		Error:          errMsg,
-		Region:         target.RegionRestriction,
 	}
 
 	if err := w.checkRepo.Save(ctx, &check); err != nil {

@@ -8,8 +8,6 @@ import (
 	"monitor-bot/internal/repository"
 	"monitor-bot/internal/service"
 	"os"
-
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -25,9 +23,13 @@ func main() {
 	defer database.Close()
 
 	userRepo := repository.NewUserRepository(database)
-	userService := service.NewUserService(userRepo)
+	subRepo := repository.NewSubscriptionRepository(database)
+	targetRepo := repository.NewTargetRepository(database)
 
-	b, err := bot.NewBot(token, userService)
+	userService := service.NewUserService(userRepo)
+	subscriptionService := service.NewSubscriptionService(subRepo, userService, targetRepo)
+
+	b, err := bot.NewBot(token, userService, subscriptionService)
 	if err != nil {
 		log.Fatal("Ошибка создания бота:", err)
 	}

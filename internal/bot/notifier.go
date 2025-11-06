@@ -5,14 +5,21 @@ import (
 	"log"
 )
 
-func (b *Bot) NotifyUser(chatID int64, message string) {
-	msg := tgbotapi.NewMessage(chatID, message)
+func (b *Bot) Notify(chatID int64, text string) error {
+	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := b.API.Send(msg)
 	if err != nil {
-		log.Println("Ошибка отправки уведомления:", err)
-		if err.Error() == "Forbidden: bot was blocked by the user" || err.Error() == "Forbidden: chat not found" {
-
-			b.UserService.Deactivate(chatID)
+		if tErr, ok := err.(tgbotapi.Error); ok {
+			if tErr.Code == 403 {
+				log.Printf("User %d заблокировал бота или удалил чат. Деактивируем пользователя.", chatID)
+				if err := b.UserService.Deactivate(chatID); err != nil {
+					log.Printf("Ошибка при деактивации пользователя %d: %v", chatID, err)
+				}
+			}
+		} else {
+			log.Printf("Ошибка отправки уведомления пользователю %d: %v", chatID, err)
 		}
+		return err
 	}
+	return nil
 }

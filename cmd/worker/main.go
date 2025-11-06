@@ -30,7 +30,6 @@ func main() {
 	s := scheduler.NewScheduler(targetRepo, w, 10*time.Second)
 	go s.Start(ctx)
 
-	// graceful shutdown
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	<-stop

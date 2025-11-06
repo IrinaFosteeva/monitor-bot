@@ -7,16 +7,25 @@ import (
 )
 
 type Bot struct {
-	API         *tgbotapi.BotAPI
-	UserService service.UserServiceInterface
+	API                 *tgbotapi.BotAPI
+	UserService         service.UserServiceInterface
+	SubscriptionService service.SubscriptionServiceInterface
 }
 
-func NewBot(token string, userService service.UserServiceInterface) (*Bot, error) {
+func NewBot(
+	token string,
+	userService service.UserServiceInterface,
+	subService service.SubscriptionServiceInterface,
+) (*Bot, error) {
 	botAPI, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, err
 	}
-	return &Bot{API: botAPI, UserService: userService}, nil
+	return &Bot{
+		API:                 botAPI,
+		UserService:         userService,
+		SubscriptionService: subService,
+	}, nil
 }
 
 func (b *Bot) Start() {
@@ -31,10 +40,33 @@ func (b *Bot) Start() {
 				b.handleStart(update.Message.Chat.ID)
 			case "test":
 				b.Notify(update.Message.Chat.ID, "Тестовое уведомление: цель недоступна!")
+			case "subscribe":
+				url := update.Message.CommandArguments()
+				if url == "" {
+					b.Notify(update.Message.Chat.ID, "Пожалуйста, укажите URL после команды /subscribe")
+					continue
+				}
+				err := b.SubscriptionService.SubscribeByURL(update.Message.Chat.ID, url)
+				if err != nil {
+					b.Notify(update.Message.Chat.ID, "Ошибка подписки: "+err.Error())
+				} else {
+					b.Notify(update.Message.Chat.ID, "Вы подписаны на "+url)
+				}
+			case "unsubscribe":
+				url := update.Message.CommandArguments()
+				if url == "" {
+					b.Notify(update.Message.Chat.ID, "Пожалуйста, укажите URL после команды /unsubscribe")
+					continue
+				}
+				err := b.SubscriptionService.UnsubscribeByURL(update.Message.Chat.ID, url)
+				if err != nil {
+					b.Notify(update.Message.Chat.ID, "Ошибка отписки: "+err.Error())
+				} else {
+					b.Notify(update.Message.Chat.ID, "Вы отписаны от "+url)
+				}
 			default:
-				b.API.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Команда не распознана"))
+				b.API.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Команда не распознана!"))
 			}
-
 		}
 	}
 }
@@ -47,10 +79,4 @@ func (b *Bot) handleStart(chatID int64) {
 		return
 	}
 	_, _ = b.API.Send(tgbotapi.NewMessage(chatID, "Регистрация прошла успешно!"))
-}
-
-func (b *Bot) Notify(chatID int64, text string) error {
-	msg := tgbotapi.NewMessage(chatID, text)
-	_, err := b.API.Send(msg)
-	return err
 }
