@@ -1,2 +1,0 @@
-ALTER TABLE checks
-DROP COLUMN region;

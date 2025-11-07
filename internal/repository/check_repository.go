@@ -50,3 +50,20 @@ func (r *CheckRepository) GetLastByTarget(ctx context.Context, targetID int64) (
 	}
 	return &c, nil
 }
+
+func (r *CheckRepository) CountLastNDown(ctx context.Context, targetID int64, n int) (int, error) {
+	var count int
+	query := `
+		SELECT COUNT(*)
+		FROM (
+			SELECT status
+			FROM checks
+			WHERE target_id = $1
+			ORDER BY timestamp DESC
+			LIMIT $2
+		) AS recent_checks
+		WHERE status = 'down'
+	`
+	err := r.db.GetContext(ctx, &count, query, targetID, n)
+	return count, err
+}

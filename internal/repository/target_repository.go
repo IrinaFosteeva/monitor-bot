@@ -10,7 +10,6 @@ type TargetRepository struct {
 	db *sqlx.DB
 }
 
-// Конструктор
 func NewTargetRepository(db *sqlx.DB) *TargetRepository {
 	return &TargetRepository{db: db}
 }

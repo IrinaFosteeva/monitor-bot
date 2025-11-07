@@ -39,8 +39,8 @@ func (r *SubscriptionRepository) UpdateLastNotified(ctx context.Context, sub mod
 
 func (r *SubscriptionRepository) Subscribe(ctx context.Context, userID, targetID int64) error {
 	query := `
-		INSERT INTO subscriptions (user_id, target_id, notify_down_only, min_retries, created_at)
-		VALUES ($1, $2, TRUE, 1, NOW())
+		INSERT INTO subscriptions (user_id, target_id, min_retries, created_at)
+		VALUES ($1, $2, 1, NOW())
 		ON CONFLICT (user_id, target_id) DO NOTHING
 	`
 	_, err := r.db.ExecContext(ctx, query, userID, targetID)

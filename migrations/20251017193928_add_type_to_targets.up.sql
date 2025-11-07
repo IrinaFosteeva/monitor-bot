@@ -1,2 +1,0 @@
-ALTER TABLE targets
-    ADD COLUMN type TEXT NOT NULL DEFAULT 'http';

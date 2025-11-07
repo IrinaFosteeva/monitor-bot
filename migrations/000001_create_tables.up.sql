@@ -5,8 +5,18 @@ CREATE TABLE users (
                        created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE regions
+(
+    id   SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+INSERT INTO regions (name)
+VALUES ('default');
+
 CREATE TABLE targets (
                          id SERIAL PRIMARY KEY,
+                         region_id INT NOT NULL DEFAULT 1 REFERENCES regions (id),
                          name TEXT NOT NULL,
                          url TEXT NOT NULL,
                          method TEXT DEFAULT 'GET',
@@ -14,10 +24,10 @@ CREATE TABLE targets (
                          body_regex TEXT,
                          interval_seconds INT DEFAULT 60,
                          timeout_seconds INT DEFAULT 5,
-                         region_restriction TEXT,
                          created_by INT REFERENCES users(id),
                          enabled BOOLEAN DEFAULT TRUE,
-                         created_at TIMESTAMP DEFAULT NOW()
+                         created_at TIMESTAMP DEFAULT NOW(),
+                         type TEXT NOT NULL DEFAULT 'http'
 );
 
 CREATE TABLE checks (
@@ -27,15 +37,20 @@ CREATE TABLE checks (
                         status TEXT,
                         http_code INT,
                         response_time_ms INT,
-                        error TEXT,
-                        region TEXT
+                        error TEXT
 );
 
 CREATE TABLE subscriptions (
                                id SERIAL PRIMARY KEY,
                                user_id INT REFERENCES users(id),
                                target_id INT REFERENCES targets(id),
-                               notify_down_only BOOLEAN DEFAULT TRUE,
+                               notify_down_only BOOLEAN DEFAULT FALSE,
                                min_retries INT DEFAULT 1,
-                               created_at TIMESTAMP DEFAULT NOW()
+                               created_at TIMESTAMP DEFAULT NOW(),
+                               last_notified TIMESTAMP
 );
+
+ALTER TABLE subscriptions
+    ADD CONSTRAINT unique_user_target UNIQUE (user_id, target_id);
+
+

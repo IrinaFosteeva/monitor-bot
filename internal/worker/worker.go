@@ -5,16 +5,26 @@ import (
 	"log"
 	"monitor-bot/internal/models"
 	"monitor-bot/internal/repository"
+	"monitor-bot/internal/service"
 	"monitor-bot/internal/worker/checkers"
 )
 
 type Worker struct {
-	targetRepo *repository.TargetRepository
-	checkRepo  *repository.CheckRepository
+	targetRepo    *repository.TargetRepository
+	checkRepo     *repository.CheckRepository
+	statusService *service.StatusService
 }
 
-func NewWorker(tRepo *repository.TargetRepository, cRepo *repository.CheckRepository) *Worker {
-	return &Worker{targetRepo: tRepo, checkRepo: cRepo}
+func NewWorker(
+	tRepo *repository.TargetRepository,
+	cRepo *repository.CheckRepository,
+	statusService *service.StatusService,
+) *Worker {
+	return &Worker{
+		targetRepo:    tRepo,
+		checkRepo:     cRepo,
+		statusService: statusService,
+	}
 }
 
 func (w *Worker) Run(ctx context.Context, target models.Target) {
@@ -67,7 +77,7 @@ func (w *Worker) Run(ctx context.Context, target models.Target) {
 		Error:          errMsg,
 	}
 
-	if err := w.checkRepo.Save(ctx, &check); err != nil {
-		log.Println("Error saving check result:", err)
+	if err := w.statusService.ProcessCheck(ctx, &check, &target); err != nil {
+		log.Println("Error processing check:", err)
 	}
 }

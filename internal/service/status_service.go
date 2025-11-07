@@ -1,6 +1,11 @@
 package service
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"monitor-bot/internal/models"
 	"monitor-bot/internal/repository"
 	"time"
 )
@@ -11,88 +16,98 @@ type StatusService struct {
 	TargetRepo     repository.TargetRepositoryInterface
 	Bot            Bot
 	NotifyInterval time.Duration
+	UserService    UserServiceInterface
 }
 
-//func (s *StatusService) ProcessCheck(ctx context.Context, result *models.Check) error {
-//	// Получаем последнюю проверку
-//	prev, err := s.CheckRepo.GetLastByTarget(ctx, result.TargetID)
-//	if err != nil && err != repository.ErrNotFound {
-//		return fmt.Errorf("не удалось получить последнюю проверку: %w", err)
-//	}
-//
-//	// Сохраняем текущую проверку
-//	if err := s.CheckRepo.Save(ctx, result); err != nil {
-//		return fmt.Errorf("не удалось сохранить проверку: %w", err)
-//	}
-//
-//	// Получаем цель
-//	target, err := s.TargetRepo.GetByID(ctx, result.TargetID)
-//	if err != nil {
-//		return fmt.Errorf("не удалось получить target: %w", err)
-//	}
-//	if target == nil {
-//		return fmt.Errorf("target с id=%d не найден", result.TargetID)
-//	}
-//
-//	// Получаем подписки
-//	subs, err := s.SubRepo.GetByTarget(ctx, result.TargetID)
-//	if err != nil {
-//		return fmt.Errorf("не удалось получить подписки: %w", err)
-//	}
-//
-//	for _, sub := range subs {
-//		// Если подписчик хочет уведомления только о падениях
-//		if result.Status == "down" {
-//			downCount, err := s.CheckRepo.CountLastNDown(ctx, result.TargetID, sub.MinRetries)
-//			if err != nil {
-//				return fmt.Errorf("ошибка подсчета последних падений: %w", err)
-//			}
-//			if downCount < sub.MinRetries {
-//				continue
-//			}
-//		}
-//
-//		// Проверяем интервал уведомлений
-//		if !sub.LastNotified.IsZero() && time.Since(sub.LastNotified) < s.NotifyInterval {
-//			continue
-//		}
-//
-//		statusText := "UP ✅"
-//		if result.Status == "down" {
-//			statusText = "DOWN ❌"
-//		}
-//		msg := fmt.Sprintf("Цель %s изменила состояние: %s", target.Name, statusText)
-//
-//		// Отправляем уведомление
-//		err := s.Bot.Notify(sub.ChatID, msg)
-//		if err != nil {
-//			// Если чат удален или бот заблокирован
-//			if isUserInactiveError(err) {
-//				if err := s.SubRepo.DeactivateUser(sub.UserID); err != nil {
-//					fmt.Println("не удалось деактивировать пользователя:", err)
-//				}
-//				fmt.Printf("Пользователь %d заблокировал бота или удалил чат\n", sub.UserID)
-//			} else {
-//				fmt.Println("Ошибка отправки уведомления:", err)
-//			}
-//			continue
-//		}
-//
-//		// Обновляем LastNotified
-//		sub.LastNotified = time.Now()
-//		if err := s.SubRepo.UpdateLastNotified(ctx, sub); err != nil {
-//			fmt.Println("не удалось обновить LastNotified:", err)
-//		}
-//	}
-//
-//	return nil
-//}
-//
-//// Вспомогательная функция для определения ошибок Telegram
-//func isUserInactiveError(err error) bool {
-//	if tErr, ok := err.(interface{ Error() string }); ok {
-//		msg := tErr.Error()
-//		return msg == "Forbidden: bot was blocked by the user" || msg == "Forbidden: chat not found"
-//	}
-//	return false
-//}
+func (s *StatusService) ProcessCheck(ctx context.Context, result *models.Check, target *models.Target) error {
+	prev, err := s.CheckRepo.GetLastByTarget(ctx, result.TargetID)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+		return fmt.Errorf("ошибка получения предыдущей проверки: %w", err)
+	}
+
+	if err := s.CheckRepo.Save(ctx, result); err != nil {
+		return fmt.Errorf("ошибка сохранения проверки: %w", err)
+	}
+
+	subs, err := s.SubRepo.GetByTarget(ctx, result.TargetID)
+	if err != nil {
+		return fmt.Errorf("ошибка получения подписок: %w", err)
+	}
+
+	for _, sub := range subs {
+		s.handleNotification(ctx, sub, prev, result, target)
+	}
+
+	return nil
+}
+
+func (s *StatusService) handleNotification(ctx context.Context, sub models.Subscription, prev *models.Check, current *models.Check, target *models.Target) {
+	prevStatus := ""
+	if prev != nil {
+		prevStatus = prev.Status
+	}
+	newStatus := current.Status
+	if sub.NotifyDownOnly && newStatus == "up" {
+		return
+	}
+
+	log.Printf("TARGET %s (%d): prevStatus=%q, newStatus=%q\n", target.Name, target.ID, prevStatus, newStatus)
+
+	switch {
+	case prevStatus == "up" && newStatus == "down":
+		if !s.shouldNotifyDown(ctx, sub, current.TargetID) {
+			return
+		}
+		msg := fmt.Sprintf("⚠️ Цель *%s* недоступна!\nURL: %s", target.Name, target.URL)
+		s.send(ctx, sub, msg)
+
+	case prevStatus == "down" && newStatus == "down":
+		if sub.LastNotified != nil && time.Since(*sub.LastNotified) < s.NotifyInterval {
+			return
+		}
+		msg := fmt.Sprintf("⏳ Цель *%s* всё ещё недоступна\nURL: %s", target.Name, target.URL)
+		s.send(ctx, sub, msg)
+
+	case prevStatus == "down" && newStatus == "up":
+		msg := fmt.Sprintf("✅ Цель *%s* восстановлена!\nURL: %s", target.Name, target.URL)
+		s.send(ctx, sub, msg)
+	}
+}
+
+func (s *StatusService) shouldNotifyDown(ctx context.Context, sub models.Subscription, targetID int64) bool {
+	downCount, err := s.CheckRepo.CountLastNDown(ctx, targetID, sub.MinRetries)
+	if err != nil {
+		log.Println("Ошибка подсчета порога падений:", err)
+		return false
+	}
+	return downCount >= sub.MinRetries
+}
+
+func (s *StatusService) send(ctx context.Context, sub models.Subscription, message string) {
+	err := s.Bot.Notify(sub.ChatID, message)
+	if err != nil {
+		if isUserInactiveError(err) {
+			log.Printf("Пользователь %d заблокировал бота. Деактивируем.", sub.UserID)
+			if deactErr := s.UserService.Deactivate(sub.UserID); deactErr != nil {
+				log.Println("Ошибка деактивации пользователя:", deactErr)
+			}
+		} else {
+			log.Println("Ошибка отправки уведомления:", err)
+		}
+		return
+	}
+
+	now := time.Now()
+	sub.LastNotified = &now
+	if err := s.SubRepo.UpdateLastNotified(ctx, sub); err != nil {
+		log.Println("Ошибка обновления LastNotified:", err)
+	}
+}
+
+func isUserInactiveError(err error) bool {
+	if err == nil {
+		return false
+	}
+	txt := err.Error()
+	return txt == "Forbidden: bot was blocked by the user" || txt == "Forbidden: chat not found"
+}
