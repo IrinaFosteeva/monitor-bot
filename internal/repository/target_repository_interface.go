@@ -12,4 +12,6 @@ type TargetRepositoryInterface interface {
 	GetAll(ctx context.Context) ([]models.Target, error)
 	Update(ctx context.Context, t *models.Target) error
 	Delete(ctx context.Context, id int64) error
+	Disable(ctx context.Context, id int64) error
+	Enable(ctx context.Context, id int64) error
 }

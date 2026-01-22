@@ -8,6 +8,7 @@ type Subscription struct {
 	TargetID       int64      `db:"target_id" json:"target_id"`
 	NotifyDownOnly bool       `db:"notify_down_only" json:"notify_down_only"`
 	MinRetries     int        `db:"min_retries" json:"min_retries"`
+	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
 	LastNotified   *time.Time `db:"last_notified" json:"last_notified"`
 	ChatID         int64      `db:"chat_id" json:"chat_id"`
 }

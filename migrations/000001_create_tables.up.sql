@@ -18,7 +18,7 @@ CREATE TABLE targets (
                          id SERIAL PRIMARY KEY,
                          region_id INT NOT NULL DEFAULT 1 REFERENCES regions (id),
                          name TEXT NOT NULL,
-                         url TEXT NOT NULL,
+                             url TEXT NOT NULL,
                          method TEXT DEFAULT 'GET',
                          expected_status INT DEFAULT 200,
                          body_regex TEXT,

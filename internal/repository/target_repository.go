@@ -17,8 +17,8 @@ func NewTargetRepository(db *sqlx.DB) *TargetRepository {
 func (r *TargetRepository) Create(ctx context.Context, t *models.Target) error {
 	query := `
 		INSERT INTO targets
-			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_id, created_by, enabled, type)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+			(name, url, method, expected_status, body_regex, interval_seconds, timeout_seconds, region_id, enabled, type)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id, created_at
 	`
 	if t.Type == "" {
@@ -38,7 +38,6 @@ func (r *TargetRepository) Create(ctx context.Context, t *models.Target) error {
 		t.IntervalSeconds,
 		t.TimeoutSeconds,
 		t.RegionID,
-		t.CreatedBy,
 		t.Enabled,
 		t.Type,
 	).Scan(&t.ID, &t.CreatedAt)
@@ -65,7 +64,7 @@ func (r *TargetRepository) GetByURL(ctx context.Context, url string) (*models.Ta
 
 func (r *TargetRepository) GetAll(ctx context.Context) ([]models.Target, error) {
 	var targets []models.Target
-	err := r.db.SelectContext(ctx, &targets, "SELECT * FROM targets ORDER BY id")
+	err := r.db.SelectContext(ctx, &targets, "SELECT * FROM targets WHERE enabled = TRUE ORDER BY id")
 	return targets, err
 }
 
@@ -107,5 +106,15 @@ func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
 
 func (r *TargetRepository) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, "DELETE FROM targets WHERE id=$1", id)
+	return err
+}
+
+func (r *TargetRepository) Disable(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "UPDATE targets SET enabled = FALSE WHERE id = $1", id)
+	return err
+}
+
+func (r *TargetRepository) Enable(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "UPDATE targets SET enabled = TRUE WHERE id = $1", id)
 	return err
 }

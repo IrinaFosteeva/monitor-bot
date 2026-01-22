@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"monitor-bot/internal/service"
@@ -46,11 +47,12 @@ func (b *Bot) Start() {
 					b.Notify(update.Message.Chat.ID, "Пожалуйста, укажите URL после команды /subscribe")
 					continue
 				}
-				err := b.SubscriptionService.SubscribeByURL(update.Message.Chat.ID, url)
+				ctx := context.Background()
+				err := b.SubscriptionService.SubscribeByURL(ctx, update.Message.Chat.ID, url)
 				if err != nil {
-					b.Notify(update.Message.Chat.ID, "Ошибка подписки: "+err.Error())
+					b.Notify(update.Message.Chat.ID, err.Error())
 				} else {
-					b.Notify(update.Message.Chat.ID, "Вы подписаны на "+url)
+					b.Notify(update.Message.Chat.ID, "✅ Вы подписаны на "+url)
 				}
 			case "unsubscribe":
 				url := update.Message.CommandArguments()
@@ -58,11 +60,12 @@ func (b *Bot) Start() {
 					b.Notify(update.Message.Chat.ID, "Пожалуйста, укажите URL после команды /unsubscribe")
 					continue
 				}
-				err := b.SubscriptionService.UnsubscribeByURL(update.Message.Chat.ID, url)
+				ctx := context.Background()
+				err := b.SubscriptionService.UnsubscribeByURL(ctx, update.Message.Chat.ID, url)
 				if err != nil {
-					b.Notify(update.Message.Chat.ID, "Ошибка отписки: "+err.Error())
+					b.Notify(update.Message.Chat.ID, err.Error())
 				} else {
-					b.Notify(update.Message.Chat.ID, "Вы отписаны от "+url)
+					b.Notify(update.Message.Chat.ID, "✅ Вы отписаны от "+url)
 				}
 			default:
 				b.API.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Команда не распознана!"))

@@ -18,7 +18,7 @@ func NewSubscriptionRepository(db *sqlx.DB) *SubscriptionRepository {
 func (r *SubscriptionRepository) GetByTarget(ctx context.Context, targetID int64) ([]models.Subscription, error) {
 	var subs []models.Subscription
 	query := `
-		SELECT s.id, s.user_id, s.target_id, s.notify_down_only, s.min_retries, s.last_notified, u.telegram_chat_id AS chat_id
+		SELECT s.*
 		FROM subscriptions s
 		JOIN users u ON u.id = s.user_id
 		WHERE s.target_id = $1 AND u.is_active = TRUE
@@ -39,8 +39,10 @@ func (r *SubscriptionRepository) UpdateLastNotified(ctx context.Context, sub mod
 
 func (r *SubscriptionRepository) Subscribe(ctx context.Context, userID, targetID int64) error {
 	query := `
-		INSERT INTO subscriptions (user_id, target_id, min_retries, created_at)
-		VALUES ($1, $2, 1, NOW())
+		INSERT INTO subscriptions (user_id, target_id, chat_id, min_retries, created_at)
+		SELECT $1, $2, telegram_chat_id, 1, NOW()
+		FROM users
+		WHERE id = $1
 		ON CONFLICT (user_id, target_id) DO NOTHING
 	`
 	_, err := r.db.ExecContext(ctx, query, userID, targetID)
@@ -54,4 +56,23 @@ func (r *SubscriptionRepository) Unsubscribe(ctx context.Context, userID, target
 	`
 	_, err := r.db.ExecContext(ctx, query, userID, targetID)
 	return err
+}
+
+func (r *SubscriptionRepository) CountByUser(ctx context.Context, userID int64) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM subscriptions WHERE user_id = $1`
+	err := r.db.GetContext(ctx, &count, query, userID)
+	return count, err
+}
+
+func (r *SubscriptionRepository) GetByUser(ctx context.Context, userID int64) ([]models.Subscription, error) {
+	var subs []models.Subscription
+	query := `
+		SELECT s.id, s.user_id, s.target_id, s.notify_down_only, s.min_retries, s.last_notified, s.chat_id
+		FROM subscriptions s
+		WHERE s.user_id = $1
+		ORDER BY s.created_at DESC
+	`
+	err := r.db.SelectContext(ctx, &subs, query, userID)
+	return subs, err
 }
