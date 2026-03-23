@@ -84,7 +84,13 @@ func (s *StatusService) shouldNotifyDown(ctx context.Context, sub models.Subscri
 }
 
 func (s *StatusService) send(ctx context.Context, sub models.Subscription, message string) {
-	err := s.Bot.Notify(sub.ChatID, message)
+	user, err := s.UserService.GetByID(sub.UserID)
+	if err != nil {
+		log.Printf("Не удалось загрузить пользователя %d для уведомления: %v", sub.UserID, err)
+		return
+	}
+
+	err = s.Bot.Notify(user.TelegramChatID, message)
 	if err != nil {
 		if isUserInactiveError(err) {
 			log.Printf("Пользователь %d заблокировал бота. Деактивируем.", sub.UserID)

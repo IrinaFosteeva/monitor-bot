@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"github.com/jmoiron/sqlx"
 	"monitor-bot/internal/models"
 )
@@ -75,7 +77,8 @@ func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
 	if t.RegionID == 0 {
 		t.RegionID = 1
 	}
-	_, err := r.db.ExecContext(ctx, `
+
+	query := `
 		UPDATE targets SET
 			name=$1,
 			url=$2,
@@ -88,7 +91,10 @@ func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
 			enabled=$9,
 		    type=$10
 		WHERE id=$11
-	`,
+		RETURNING created_at
+	`
+
+	err := r.db.QueryRowContext(ctx, query,
 		t.Name,
 		t.URL,
 		t.Method,
@@ -100,7 +106,10 @@ func (r *TargetRepository) Update(ctx context.Context, t *models.Target) error {
 		t.Enabled,
 		t.Type,
 		t.ID,
-	)
+	).Scan(&t.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
 	return err
 }
 

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -78,36 +79,23 @@ func UpdateTarget(repo *repository.TargetRepository) http.HandlerFunc {
 			return
 		}
 
-		existing, err := repo.GetByID(ctx, id)
-		if err != nil {
-			http.Error(w, "Target not found", http.StatusNotFound)
-			return
-		}
-
 		var t models.Target
 		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 			http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		existing.Name = t.Name
-		existing.URL = t.URL
-		existing.Method = t.Method
-		existing.ExpectedStatus = t.ExpectedStatus
-		existing.BodyRegex = t.BodyRegex
-		existing.IntervalSeconds = t.IntervalSeconds
-		existing.TimeoutSeconds = t.TimeoutSeconds
-		existing.RegionID = t.RegionID
-		existing.Enabled = t.Enabled
-		existing.Type = t.Type
-
-		if err := repo.Update(ctx, existing); err != nil {
+		t.ID = id
+		if err := repo.Update(ctx, &t); err != nil {
+			if errors.Is(err, repository.ErrNotFound) {
+				http.Error(w, "Target not found", http.StatusNotFound)
+				return
+			}
 			http.Error(w, "Failed to update target: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(existing)
+		json.NewEncoder(w).Encode(t)
 	}
 }
 

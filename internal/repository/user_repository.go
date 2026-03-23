@@ -23,10 +23,10 @@ func (r *UserRepository) CreateOrActivate(chatID int64) error {
 	return err
 }
 
-func (r *UserRepository) Deactivate(chatID int64) error {
+func (r *UserRepository) Deactivate(userID int64) error {
 	_, err := r.DB.Exec(
-		`UPDATE users SET is_active = false WHERE telegram_chat_id = $1`,
-		chatID,
+		`UPDATE users SET is_active = false WHERE id = $1`,
+		userID,
 	)
 	return err
 }
@@ -34,10 +34,23 @@ func (r *UserRepository) Deactivate(chatID int64) error {
 func (r *UserRepository) GetByChatID(chatID int64) (*models.User, error) {
 	var user models.User
 	err := r.DB.Get(&user, `
-		SELECT id, telegram_chat_id, is_active, created_at
+		SELECT id, telegram_chat_id, is_active, is_premium, created_at
 		FROM users
 		WHERE telegram_chat_id = $1
 	`, chatID)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserRepository) GetByID(userID int64) (*models.User, error) {
+	var user models.User
+	err := r.DB.Get(&user, `
+		SELECT id, telegram_chat_id, is_active, is_premium, created_at
+		FROM users
+		WHERE id = $1
+	`, userID)
 	if err != nil {
 		return nil, err
 	}
