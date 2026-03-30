@@ -3,9 +3,10 @@ package routes
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"monitor-bot/internal/handlers"
 	"monitor-bot/internal/repository"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func SetupRoutes(repo *repository.TargetRepository) *chi.Mux {

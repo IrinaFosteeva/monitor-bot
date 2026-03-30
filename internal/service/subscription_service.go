@@ -9,11 +9,6 @@ import (
 	"monitor-bot/internal/repository"
 )
 
-type SubscriptionServiceInterface interface {
-	SubscribeByURL(ctx context.Context, chatID int64, url string) error
-	UnsubscribeByURL(ctx context.Context, chatID int64, url string) error
-}
-
 type SubscriptionService struct {
 	SubRepo    *repository.SubscriptionRepository
 	UserRepo   UserServiceInterface

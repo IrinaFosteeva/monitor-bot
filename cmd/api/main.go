@@ -4,10 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/joho/godotenv"
 	"monitor-bot/internal/db"
 	"monitor-bot/internal/repository"
 	"monitor-bot/internal/routes"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {

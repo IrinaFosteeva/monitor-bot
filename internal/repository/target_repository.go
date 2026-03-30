@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/jmoiron/sqlx"
 	"monitor-bot/internal/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type TargetRepository struct {

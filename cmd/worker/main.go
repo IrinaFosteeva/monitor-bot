@@ -12,7 +12,13 @@ import (
 	"monitor-bot/internal/worker"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
+)
+
+const (
+	notifyInterval    = 1 * time.Minute
+	schedulerInterval = 10 * time.Second
 )
 
 func main() {
@@ -20,8 +26,8 @@ func main() {
 		log.Println("⚠️ Не удалось загрузить .env (файл может отсутствовать)")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	dbConn := db.ConnectDB()
 	defer dbConn.Close()
@@ -50,16 +56,15 @@ func main() {
 		TargetRepo:     targetRepo,
 		Bot:            telegramBot,
 		UserService:    userService,
-		NotifyInterval: 1 * time.Minute,
+		NotifyInterval: notifyInterval,
 	}
 
 	w := worker.NewWorker(targetRepo, checkRepo, statusService)
 
-	s := scheduler.NewScheduler(targetRepo, w, 10*time.Second)
+	s := scheduler.NewScheduler(targetRepo, w, schedulerInterval)
+	log.Printf("Worker started: scheduler interval=%s, notify interval=%s", schedulerInterval, notifyInterval)
 	go s.Start(ctx)
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	<-stop
-	log.Println("Shutting down...")
+	<-ctx.Done()
+	log.Println("Worker shutting down...")
 }
